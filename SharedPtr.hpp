@@ -11,9 +11,11 @@
 #endif
 
 namespace cs540 {
+namespace {
 template <typename T>
-static void _generic_delete(const void *ptr) noexcept {
+void generic_delete(const void *ptr) noexcept {
     delete reinterpret_cast<const T *>(ptr);
+}
 }
 
 template <typename T>
@@ -85,7 +87,7 @@ public:
     template <typename U>
     explicit SharedPtr(U *ptr) :
         _counter{ptr ? new std::atomic_uintptr_t{1} : nullptr},
-        _deleter{&_generic_delete<U>},
+        _deleter{&generic_delete<U>},
         _ptr{ptr},
         _base{ptr} {}
 
@@ -135,7 +137,7 @@ public:
         auto new_counter = ptr ? new std::atomic_uintptr_t{1} : nullptr;
         _release();
         _counter = new_counter;
-        _deleter = &_generic_delete<U>;
+        _deleter = &generic_delete<U>;
         _ptr = ptr;
         _base = ptr;
     }
