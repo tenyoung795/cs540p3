@@ -80,6 +80,8 @@ class SharedPtr {
 public:
     constexpr SharedPtr() noexcept :  _counter{}, _deleter{}, _ptr{}, _base{} {}
 
+    constexpr explicit SharedPtr(std::nullptr_t) noexcept : SharedPtr{} {}
+
     template <typename U>
     explicit SharedPtr(U *ptr) :
         _counter{ptr ? new std::atomic_uintptr_t{1} : nullptr},
