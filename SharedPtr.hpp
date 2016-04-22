@@ -132,6 +132,10 @@ public:
         _clear();
     }
 
+    void reset(std::nullptr_t) noexcept {
+        reset();
+    }
+
     template <typename U>
     void reset(U *ptr) {
         auto new_counter = ptr ? new std::atomic_uintptr_t{1} : nullptr;
