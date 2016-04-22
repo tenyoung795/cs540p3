@@ -4,7 +4,7 @@
 #include <cstddef>
 
 #include <atomic>
-#include <stdexcept>
+#include <utility>
 
 #if ATOMIC_POINTER_LOCK_FREE < 2
 #warn "std::atomic_uintptr_t is not always lock-free"
@@ -35,7 +35,13 @@ class SharedPtr {
     }
 
     template <typename U>
-    void _assign_from(const SharedPtr<U> &that) noexcept {
+    explicit SharedPtr(SharedPtr<U> &&that, T *base) noexcept :
+        _counter{that._counter}, _deleter{that._deleter}, _ptr{that._ptr}, _base{base} {
+        that._clear();
+    }
+
+    template <typename U>
+    void _copy_from(const SharedPtr<U> &that) noexcept {
         if (static_cast<const void *>(this) != static_cast<const void *>(&that)) {
             if (that._counter) {
                 that._counter->fetch_add(1, std::memory_order_relaxed);
@@ -48,11 +54,27 @@ class SharedPtr {
         }
     }
 
+    template <typename U>
+    void _move_from(SharedPtr<U> &&that) noexcept {
+        _counter = that._counter;
+        _deleter = that._deleter;
+        _ptr = that._ptr;
+        _base = that._base;
+        that._clear();
+    }
+
     void _release() noexcept {
         if (_counter && _counter->fetch_sub(1, std::memory_order_acq_rel) == 1) {
             (*_deleter)(_ptr);
             delete _counter;
         }
+    }
+
+    void _clear() noexcept {
+        _counter = nullptr;
+        _deleter = nullptr;
+        _ptr = nullptr;
+        _base = nullptr;
     }
 
 public:
@@ -70,14 +92,30 @@ public:
     template <typename U>
     SharedPtr(const SharedPtr<U> &that) noexcept : SharedPtr{that, that._base} {}
 
+    SharedPtr(SharedPtr &&that) noexcept : SharedPtr{std::move(that), that._base} {}
+
+    template <typename U>
+    SharedPtr(SharedPtr<U> &&that) noexcept : SharedPtr{std::move(that), that._base} {}
+
     SharedPtr &operator=(const SharedPtr &that) noexcept {
-        _assign_from(that);
+        _copy_from(that);
         return *this;
     }
 
     template <typename U>
     SharedPtr &operator=(const SharedPtr<U> &that) noexcept {
-        _assign_from(that);
+        _copy_from(that);
+        return *this;
+    }
+
+    SharedPtr &operator=(SharedPtr &&that) noexcept {
+        _move_from(std::move(that));
+        return *this;
+    }
+
+    template <typename U>
+    SharedPtr &operator=(SharedPtr<U> &&that) noexcept {
+        _move_from(std::move(that));
         return *this;
     }
 
@@ -87,10 +125,7 @@ public:
 
     void reset() noexcept {
         _release();
-        _counter = nullptr;
-        _deleter = nullptr;
-        _ptr = nullptr;
-        _base = nullptr;
+        _clear();
     }
 
     template <typename U>
@@ -127,7 +162,13 @@ public:
     friend SharedPtr<U> static_pointer_cast(const SharedPtr<V> &) noexcept;
 
     template <typename U, typename V>
+    friend SharedPtr<U> static_pointer_cast(SharedPtr<V> &&) noexcept;
+
+    template <typename U, typename V>
     friend SharedPtr<U> dynamic_pointer_cast(const SharedPtr<V> &) noexcept;
+
+    template <typename U, typename V>
+    friend SharedPtr<U> dynamic_pointer_cast(SharedPtr<V> &&) noexcept;
 };
 
 template <typename T1, typename T2>
@@ -168,9 +209,20 @@ static SharedPtr<T> static_pointer_cast(const SharedPtr<U> &sp) noexcept {
 }
 
 template <typename T, typename U>
+static SharedPtr<T> static_pointer_cast(SharedPtr<U> &&sp) noexcept {
+    return SharedPtr<T> {std::move(sp), static_cast<T *>(sp._base)};
+}
+
+template <typename T, typename U>
 static SharedPtr<T> dynamic_pointer_cast(const SharedPtr<U> &sp) noexcept {
     auto base = dynamic_cast<T *>(sp._base);
     return base ? SharedPtr<T> {sp, base} : SharedPtr<T> {};
+}
+
+template <typename T, typename U>
+static SharedPtr<T> dynamic_pointer_cast(SharedPtr<U> &&sp) noexcept {
+    auto base = dynamic_cast<T *>(sp._base);
+    return base ? SharedPtr<T> {std::move(sp), base} : SharedPtr<T> {};
 }
 }
 
