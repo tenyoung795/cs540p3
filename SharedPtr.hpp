@@ -19,6 +19,11 @@ protected:
     constexpr SharedObjectBase() noexcept : _counter{1} {}
 
 public:
+    SharedObjectBase(const SharedObjectBase &) = delete;
+    SharedObjectBase(SharedObjectBase &&) = delete;
+    SharedObjectBase &operator=(const SharedObjectBase &) = delete;
+    SharedObjectBase &operator=(SharedObjectBase &&) = delete;
+
     virtual ~SharedObjectBase() = default;
 
     auto increment() noexcept {
