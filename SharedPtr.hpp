@@ -37,15 +37,20 @@ public:
 
 template <typename T>
 class SharedObject final : public SharedObjectBase {
-    T *const _ptr;
+    const T *const _ptr;
 
 public:
-    constexpr explicit SharedObject(T *ptr) noexcept : _ptr{ptr} {}
+    constexpr explicit SharedObject(const T *ptr) noexcept : _ptr{ptr} {}
 
     ~SharedObject() override {
         delete _ptr;
     }
 };
+
+template <typename T>
+SharedObjectBase *share(const T *ptr) {
+    return ptr ? new SharedObject<T> {ptr} : nullptr;
+}
 }
 
 template <typename T>
@@ -102,7 +107,7 @@ public:
     constexpr explicit SharedPtr(std::nullptr_t) noexcept : SharedPtr{} {}
 
     template <typename U>
-    explicit SharedPtr(U *ptr) : _object{new SharedObject<U> {ptr}}, _base{ptr} {}
+    explicit SharedPtr(U *ptr) : _object{share(ptr)}, _base{ptr} {}
 
     SharedPtr(const SharedPtr &that) noexcept : SharedPtr{that, that._base} {}
 
@@ -151,7 +156,7 @@ public:
 
     template <typename U>
     void reset(U *ptr) {
-        auto new_object = ptr ? new SharedObject<U> {ptr} : nullptr;
+        auto new_object = share(ptr);
         _release();
         _object = new_object;
         _base = ptr;
