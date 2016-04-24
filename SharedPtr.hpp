@@ -37,7 +37,7 @@ public:
 
 template <typename T>
 class SharedObject final : public SharedObjectBase {
-    T *_ptr;
+    T *const _ptr;
 
 public:
     constexpr explicit SharedObject(T *ptr) noexcept : _ptr{ptr} {}
