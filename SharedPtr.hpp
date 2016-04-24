@@ -12,26 +12,33 @@
 
 namespace cs540 {
 namespace {
-template <typename T>
-void generic_delete(const void *ptr) noexcept {
-    delete reinterpret_cast<const T *>(ptr);
-}
+class SharedObjectBase {
+    std::atomic_uintptr_t _counter;
 
-struct SharedObject {
-    std::atomic_uintptr_t counter;
-    void (&deleter)(const void *);
-    const void *const ptr;
+protected:
+    constexpr SharedObjectBase() noexcept : _counter{1} {}
 
-    template <typename T>
-    constexpr explicit SharedObject(const T *ptr) noexcept :
-        counter{1}, deleter(generic_delete<T>), ptr{ptr} {}
+public:
+    virtual ~SharedObjectBase() = default;
 
     auto increment() noexcept {
-        return counter.fetch_add(1, std::memory_order_relaxed);
+        return _counter.fetch_add(1, std::memory_order_relaxed);
     }
 
     auto decrement() noexcept {
-        return counter.fetch_sub(1, std::memory_order_acq_rel);
+        return _counter.fetch_sub(1, std::memory_order_acq_rel);
+    }
+};
+
+template <typename T>
+class SharedObject final : public SharedObjectBase {
+    T *_ptr;
+
+public:
+    constexpr explicit SharedObject(T *ptr) noexcept : _ptr{ptr} {}
+
+    ~SharedObject() override {
+        delete _ptr;
     }
 };
 }
@@ -41,7 +48,7 @@ class SharedPtr {
     template <typename>
     friend class SharedPtr;
 
-    SharedObject *_object;
+    SharedObjectBase *_object;
     T *_base;
 
     template <typename U>
@@ -75,7 +82,6 @@ class SharedPtr {
 
     void _release() noexcept {
         if (_object && _object->decrement() == 1) {
-            _object->deleter(_object->ptr);
             delete _object;
         }
     }
@@ -91,7 +97,7 @@ public:
     constexpr explicit SharedPtr(std::nullptr_t) noexcept : SharedPtr{} {}
 
     template <typename U>
-    explicit SharedPtr(U *ptr) : _object{new SharedObject {ptr}}, _base{ptr} {}
+    explicit SharedPtr(U *ptr) : _object{new SharedObject<U> {ptr}}, _base{ptr} {}
 
     SharedPtr(const SharedPtr &that) noexcept : SharedPtr{that, that._base} {}
 
@@ -140,7 +146,7 @@ public:
 
     template <typename U>
     void reset(U *ptr) {
-        auto new_object = ptr ? new SharedObject {ptr} : nullptr;
+        auto new_object = ptr ? new SharedObject<U> {ptr} : nullptr;
         _release();
         _object = new_object;
         _base = ptr;
