@@ -16,6 +16,24 @@ template <typename T>
 void generic_delete(const void *ptr) noexcept {
     delete reinterpret_cast<const T *>(ptr);
 }
+
+struct SharedObject {
+    std::atomic_uintptr_t counter;
+    void (&deleter)(const void *);
+    const void *const ptr;
+
+    template <typename T>
+    constexpr explicit SharedObject(const T *ptr) noexcept :
+        counter{1}, deleter(generic_delete<T>), ptr{ptr} {}
+
+    auto increment() noexcept {
+        return counter.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    auto decrement() noexcept {
+        return counter.fetch_sub(1, std::memory_order_acq_rel);
+    }
+};
 }
 
 template <typename T>
@@ -23,73 +41,57 @@ class SharedPtr {
     template <typename>
     friend class SharedPtr;
 
-    std::atomic_uintptr_t *_counter;
-    void (*_deleter)(const void *);
-    const void *_ptr;
+    SharedObject *_object;
     T *_base;
 
     template <typename U>
     explicit SharedPtr(const SharedPtr<U> &that, T *base) noexcept :
-        _counter{that._counter}, _deleter{that._deleter}, _ptr{that._ptr}, _base{base} {
-        if (_counter) {
-            _counter->fetch_add(1, std::memory_order_relaxed);
-        }
+        _object{that._object}, _base{base} {
+        if (_object) _object->increment();
     }
 
     template <typename U>
     explicit SharedPtr(SharedPtr<U> &&that, T *base) noexcept :
-        _counter{that._counter}, _deleter{that._deleter}, _ptr{that._ptr}, _base{base} {
+        _object{that._object}, _base{base} {
         that._clear();
     }
 
     template <typename U>
     void _copy_from(const SharedPtr<U> &that) noexcept {
         if (static_cast<const void *>(this) != static_cast<const void *>(&that)) {
-            if (that._counter) {
-                that._counter->fetch_add(1, std::memory_order_relaxed);
-            }
+            if (that._object) that._object->increment();
             _release();
-            _counter = that._counter;
-            _deleter = that._deleter;
-            _ptr = that._ptr;
+            _object = that._object;
             _base = that._base;
         }
     }
 
     template <typename U>
     void _move_from(SharedPtr<U> &&that) noexcept {
-        _counter = that._counter;
-        _deleter = that._deleter;
-        _ptr = that._ptr;
+        _object = that._object;
         _base = that._base;
         that._clear();
     }
 
     void _release() noexcept {
-        if (_counter && _counter->fetch_sub(1, std::memory_order_acq_rel) == 1) {
-            (*_deleter)(_ptr);
-            delete _counter;
+        if (_object && _object->decrement() == 1) {
+            _object->deleter(_object->ptr);
+            delete _object;
         }
     }
 
     void _clear() noexcept {
-        _counter = nullptr;
-        _deleter = nullptr;
-        _ptr = nullptr;
+        _object = nullptr;
         _base = nullptr;
     }
 
 public:
-    constexpr SharedPtr() noexcept :  _counter{}, _deleter{}, _ptr{}, _base{} {}
+    constexpr SharedPtr() noexcept :  _object{}, _base{} {}
 
     constexpr explicit SharedPtr(std::nullptr_t) noexcept : SharedPtr{} {}
 
     template <typename U>
-    explicit SharedPtr(U *ptr) :
-        _counter{ptr ? new std::atomic_uintptr_t{1} : nullptr},
-        _deleter{&generic_delete<U>},
-        _ptr{ptr},
-        _base{ptr} {}
+    explicit SharedPtr(U *ptr) : _object{new SharedObject {ptr}}, _base{ptr} {}
 
     SharedPtr(const SharedPtr &that) noexcept : SharedPtr{that, that._base} {}
 
@@ -138,11 +140,9 @@ public:
 
     template <typename U>
     void reset(U *ptr) {
-        auto new_counter = ptr ? new std::atomic_uintptr_t{1} : nullptr;
+        auto new_object = ptr ? new SharedObject {ptr} : nullptr;
         _release();
-        _counter = new_counter;
-        _deleter = &generic_delete<U>;
-        _ptr = ptr;
+        _object = new_object;
         _base = ptr;
     }
 
@@ -182,7 +182,7 @@ public:
 template <typename T1, typename T2>
 static constexpr bool operator==(const SharedPtr<T1> &sp1,
                                  const SharedPtr<T2> &sp2) noexcept {
-    return sp1._ptr == sp2._ptr;
+    return sp1._object == sp2._object;
 }
 
 template <typename T>
