@@ -64,13 +64,7 @@ template <>
 struct IsIomanip<decltype(std::setw(0))> : std::true_type {};
 
 template <typename MoneyT>
-struct IsIomanip<decltype(std::get_money(std::declval<MoneyT &>()))> : std::true_type {};
-
-template <typename MoneyT>
 struct IsIomanip<decltype(std::put_money(std::declval<const MoneyT &>()))> : std::true_type {};
-
-template <>
-struct IsIomanip<decltype(std::get_time(nullptr, ""))> : std::true_type {};
 
 template <>
 struct IsIomanip<decltype(std::put_time(nullptr, ""))> : std::true_type {};
