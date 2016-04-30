@@ -42,6 +42,9 @@ template <>
 struct IsIomanip<std::ios_base &(&)(std::ios_base &)> : std::true_type {};
 
 template <>
+struct IsIomanip<std::ios_base &(*)(std::ios_base &)> : std::true_type {};
+
+template <>
 struct IsIomanip<decltype(
     std::resetiosflags(std::declval<std::ios_base::fmtflags>())
 )> : std::true_type {};
