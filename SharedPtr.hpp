@@ -193,7 +193,7 @@ public:
 
     template <typename U, typename V>
     friend SharedPtr<U> dynamic_pointer_cast(SharedPtr<V> &&) noexcept;
-};
+}; // template <typename> class SharedPtr
 
 template <typename T1, typename T2>
 inline constexpr bool operator==(const SharedPtr<T1> &sp1,
