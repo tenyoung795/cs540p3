@@ -202,9 +202,6 @@ const char *Interpolation<Ts...>::_check_format(const char *fmt) {
                 goto done;
             case '%':
                 ++actual;
-                if (actual > expected) {
-                    throw WrongNumberOfArgs {expected, actual};
-                }
                 break;
             case '\\':
                 ++iter;
@@ -222,7 +219,7 @@ const char *Interpolation<Ts...>::_check_format(const char *fmt) {
         ++iter;
     }
 done:
-    if (actual < expected) {
+    if (actual != expected) {
         throw WrongNumberOfArgs {expected, actual};
     }
     return fmt;
