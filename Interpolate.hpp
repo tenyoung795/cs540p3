@@ -63,12 +63,6 @@ struct IsIomanip<decltype(std::setprecision(0))> : std::true_type {};
 template <>
 struct IsIomanip<decltype(std::setw(0))> : std::true_type {};
 
-template <typename MoneyT>
-struct IsIomanip<decltype(std::put_money(std::declval<const MoneyT &>()))> : std::true_type {};
-
-template <>
-struct IsIomanip<decltype(std::put_time(nullptr, ""))> : std::true_type {};
-
 template <std::size_t N>
 using size_t_constant = std::integral_constant<std::size_t, N>;
 
