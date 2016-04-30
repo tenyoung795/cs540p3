@@ -11,7 +11,7 @@
 #endif
 
 namespace cs540 {
-namespace {
+namespace internal {
 class SharedObjectBase {
     std::atomic_uintptr_t _counter;
 
@@ -58,7 +58,7 @@ class SharedPtr {
     template <typename>
     friend class SharedPtr;
 
-    SharedObjectBase *_object;
+    internal::SharedObjectBase *_object;
     T *_base;
 
     template <typename U>
@@ -107,7 +107,7 @@ public:
     constexpr explicit SharedPtr(std::nullptr_t) noexcept : SharedPtr{} {}
 
     template <typename U>
-    explicit SharedPtr(U *ptr) : _object{share(ptr)}, _base{ptr} {}
+    explicit SharedPtr(U *ptr) : _object{internal::share(ptr)}, _base{ptr} {}
 
     SharedPtr(const SharedPtr &that) noexcept : SharedPtr{that, that._base} {}
 
@@ -156,7 +156,7 @@ public:
 
     template <typename U>
     void reset(U *ptr) {
-        auto new_object = share(ptr);
+        auto new_object = internal::share(ptr);
         _release();
         _object = new_object;
         _base = ptr;

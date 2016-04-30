@@ -14,12 +14,14 @@
 #include <utility>
 
 namespace cs540 {
+namespace internal {
 template <typename...>
 class Interpolation;
 }
+}
 
 template <typename... Ts>
-std::ostream &operator<<(std::ostream &, cs540::Interpolation<Ts...> &&);
+std::ostream &operator<<(std::ostream &, cs540::internal::Interpolation<Ts...> &&);
 
 namespace cs540 {
 class WrongNumberOfArgs : public std::logic_error {
@@ -32,7 +34,7 @@ public:
         }()} {}
 };
 
-namespace {
+namespace internal {
 template <typename>
 struct IsIomanip : std::false_type {};
 
@@ -155,7 +157,6 @@ struct Print<size_t_constant<sizeof...(Ts)>, Ts...> {
     }
     Print() = delete;
 };
-} // anonymous namespace
 
 template <typename... Ts>
 class Interpolation {
@@ -232,10 +233,11 @@ public:
     template <typename... Us>
     friend std::ostream &::operator<<(std::ostream &out, Interpolation<Us...> &&);
 }; // template <typename...> class Interpolation
+} // namespace internal
 
 template <typename... Ts>
 inline auto Interpolate(const char *fmt, Ts &&...elements) {
-    return Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
+    return internal::Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
 }
 
 inline auto ffr(std::ostream &(&f)(std::ostream &)) {
@@ -245,10 +247,10 @@ inline auto ffr(std::ostream &(&f)(std::ostream &)) {
 
 template <typename... Ts>
 inline std::ostream &operator<<(std::ostream &out,
-                                cs540::Interpolation<Ts...> &&interpolation) {
+                                cs540::internal::Interpolation<Ts...> &&interpolation) {
     auto fmt = interpolation._fmt;
-    cs540::Print<cs540::size_t_constant<0>, Ts...>::run(std::move(interpolation),
-                                                        fmt, out);
+    cs540::internal::Print<cs540::internal::size_t_constant<0>, Ts...>
+                   ::run(std::move(interpolation), fmt, out);
     return out;
 }
 
