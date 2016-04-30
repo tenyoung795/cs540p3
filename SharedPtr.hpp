@@ -48,7 +48,7 @@ public:
 };
 
 template <typename T>
-inline SharedObjectBase *share(const T *ptr) {
+SharedObjectBase *share(const T *ptr) {
     return ptr ? new SharedObject<T> {ptr} : nullptr;
 }
 }
@@ -196,55 +196,55 @@ public:
 }; // template <typename> class SharedPtr
 
 template <typename T1, typename T2>
-inline constexpr bool operator==(const SharedPtr<T1> &sp1,
-                                 const SharedPtr<T2> &sp2) noexcept {
+constexpr bool operator==(const SharedPtr<T1> &sp1,
+                          const SharedPtr<T2> &sp2) noexcept {
     return sp1._object == sp2._object;
 }
 
 template <typename T>
-inline constexpr bool operator==(const SharedPtr<T> &sp, std::nullptr_t) noexcept {
+constexpr bool operator==(const SharedPtr<T> &sp, std::nullptr_t) noexcept {
     return sp;
 }
 
 template <typename T>
-inline constexpr bool operator==(std::nullptr_t, const SharedPtr<T> &sp) noexcept {
+constexpr bool operator==(std::nullptr_t, const SharedPtr<T> &sp) noexcept {
     return sp;
 }
 
 template <typename T1, typename T2>
-inline constexpr bool operator!=(const SharedPtr<T1> &sp1,
-                                 const SharedPtr<T2> &sp2) noexcept {
+constexpr bool operator!=(const SharedPtr<T1> &sp1,
+                          const SharedPtr<T2> &sp2) noexcept {
     return !(sp1 == sp2);
 }
 
 template <typename T>
-inline constexpr bool operator!=(const SharedPtr<T> &sp, std::nullptr_t) noexcept {
+constexpr bool operator!=(const SharedPtr<T> &sp, std::nullptr_t) noexcept {
     return !sp;
 }
 
 template <typename T>
-inline constexpr bool operator!=(std::nullptr_t, const SharedPtr<T> &sp) noexcept {
+constexpr bool operator!=(std::nullptr_t, const SharedPtr<T> &sp) noexcept {
     return !sp;
 }
 
 template <typename T, typename U>
-inline SharedPtr<T> static_pointer_cast(const SharedPtr<U> &sp) noexcept {
+SharedPtr<T> static_pointer_cast(const SharedPtr<U> &sp) noexcept {
     return SharedPtr<T> {sp, static_cast<T *>(sp._base)};
 }
 
 template <typename T, typename U>
-inline SharedPtr<T> static_pointer_cast(SharedPtr<U> &&sp) noexcept {
+SharedPtr<T> static_pointer_cast(SharedPtr<U> &&sp) noexcept {
     return SharedPtr<T> {std::move(sp), static_cast<T *>(sp._base)};
 }
 
 template <typename T, typename U>
-inline SharedPtr<T> dynamic_pointer_cast(const SharedPtr<U> &sp) noexcept {
+SharedPtr<T> dynamic_pointer_cast(const SharedPtr<U> &sp) noexcept {
     auto base = dynamic_cast<T *>(sp._base);
     return base ? SharedPtr<T> {sp, base} : SharedPtr<T> {};
 }
 
 template <typename T, typename U>
-inline SharedPtr<T> dynamic_pointer_cast(SharedPtr<U> &&sp) noexcept {
+SharedPtr<T> dynamic_pointer_cast(SharedPtr<U> &&sp) noexcept {
     auto base = dynamic_cast<T *>(sp._base);
     return base ? SharedPtr<T> {std::move(sp), base} : SharedPtr<T> {};
 }

@@ -239,7 +239,7 @@ done:
 } // namespace internal
 
 template <typename... Ts>
-inline auto Interpolate(const char *fmt, Ts &&...elements) {
+auto Interpolate(const char *fmt, Ts &&...elements) {
     return internal::Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
 }
 
@@ -249,8 +249,8 @@ inline auto ffr(std::ostream &(&f)(std::ostream &)) {
 } // namespace cs540
 
 template <typename... Ts>
-inline std::ostream &operator<<(std::ostream &out,
-                                cs540::internal::Interpolation<Ts...> &&interpolation) {
+std::ostream &operator<<(std::ostream &out,
+                         cs540::internal::Interpolation<Ts...> &&interpolation) {
     auto fmt = interpolation._fmt;
     cs540::internal::Print<cs540::internal::size_t_constant<0>, Ts...>
                    ::run(std::move(interpolation), fmt, out);
