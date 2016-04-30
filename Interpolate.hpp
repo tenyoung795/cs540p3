@@ -186,41 +186,7 @@ class Interpolation {
     const char *const _fmt;
     std::tuple<Ts &&...> _elements;
 
-    static const char *_check_format(const char *fmt) {
-        constexpr auto expected = CountSpecifiers<Ts...>::value;
-        std::size_t actual = 0;
-        const char *iter = fmt;
-        while (true) {
-            switch (*iter) {
-                case '\0':
-                    goto done;
-                case '%':
-                    ++actual;
-                    if (actual > expected) {
-                        throw WrongNumberOfArgs {expected, actual};
-                    }
-                    break;
-                case '\\':
-                    ++iter;
-                    switch (*iter) {
-                        case '\0':
-                            goto done;
-                        case '%':
-                            break;
-                        default:
-                            // skip the extra ++iter
-                            continue;
-                    }
-                    break;
-            }
-            ++iter;
-        }
-    done:
-        if (actual < expected) {
-            throw WrongNumberOfArgs {expected, actual};
-        }
-        return fmt;
-    }
+    static const char *_check_format(const char *fmt);
 
 public:
     explicit Interpolation(const char *fmt, Ts &&...elements) :
@@ -233,6 +199,43 @@ public:
     template <typename... Us>
     friend std::ostream &::operator<<(std::ostream &out, Interpolation<Us...> &&);
 }; // template <typename...> class Interpolation
+
+template <typename... Ts>
+const char *Interpolation<Ts...>::_check_format(const char *fmt) {
+    constexpr auto expected = CountSpecifiers<Ts...>::value;
+    std::size_t actual = 0;
+    const char *iter = fmt;
+    while (true) {
+        switch (*iter) {
+            case '\0':
+                goto done;
+            case '%':
+                ++actual;
+                if (actual > expected) {
+                    throw WrongNumberOfArgs {expected, actual};
+                }
+                break;
+            case '\\':
+                ++iter;
+                switch (*iter) {
+                    case '\0':
+                        goto done;
+                    case '%':
+                        break;
+                    default:
+                        // skip the extra ++iter
+                        continue;
+                }
+                break;
+        }
+        ++iter;
+    }
+done:
+    if (actual < expected) {
+        throw WrongNumberOfArgs {expected, actual};
+    }
+    return fmt;
+}
 } // namespace internal
 
 template <typename... Ts>
