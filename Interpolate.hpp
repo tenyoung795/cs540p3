@@ -87,7 +87,7 @@ struct CountSpecifiers<T, Ts...> : size_t_constant<
     !IsIomanip<T>::value + CountSpecifiers<Ts...>::value
 > {};
 
-static void print_escaping_percents(const char *str, std::ostream &out) {
+inline void print_escaping_percents(const char *str, std::ostream &out) {
     constexpr char escaped_percent[] = R"(\%)";
     while (true) {
         const char *needle = std::strstr(str, escaped_percent);
@@ -99,7 +99,7 @@ static void print_escaping_percents(const char *str, std::ostream &out) {
     out << str;
 }
 
-static const char *print_till_specifier(const char *fmt, std::ostream &out) {
+inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
     const char *next = fmt;
     while (true) {
         switch (*next) {
@@ -234,17 +234,17 @@ public:
 }; // template <typename...> class Interpolation
 
 template <typename... Ts>
-static auto Interpolate(const char *fmt, Ts &&...elements) {
+inline auto Interpolate(const char *fmt, Ts &&...elements) {
     return Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
 }
 
-static auto ffr(std::ostream &(&f)(std::ostream &)) {
+inline auto ffr(std::ostream &(&f)(std::ostream &)) {
     return f;
 }
 } // namespace cs540
 
 template <typename... Ts>
-static std::ostream &operator<<(std::ostream &out,
+inline std::ostream &operator<<(std::ostream &out,
                                 cs540::Interpolation<Ts...> &&interpolation) {
     auto fmt = interpolation._fmt;
     cs540::Print<cs540::size_t_constant<0>, Ts...>::run(std::move(interpolation),
