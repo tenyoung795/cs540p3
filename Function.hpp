@@ -11,7 +11,7 @@
 namespace cs540 {
 class BadFunctionCall : public std::logic_error {
 public:
-    BadFunctionCall() : logic_error{""} {}
+    BadFunctionCall() : logic_error{"bad function call"} {}
 };
 
 namespace internal {
