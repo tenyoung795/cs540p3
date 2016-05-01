@@ -2,7 +2,6 @@
 #define CS540_INTERPOLATE_HPP
 
 #include <cstddef>
-#include <cstring>
 
 #include <iomanip>
 #include <ostream>
@@ -80,18 +79,6 @@ struct CountSpecifiers<T, Ts...> : size_t_constant<
     !IsIomanip<T>::value + CountSpecifiers<Ts...>::value
 > {};
 
-inline void print_escaping_percents(const char *str, std::ostream &out) {
-    constexpr char escaped_percent[] = R"(\%)";
-    while (true) {
-        const char *needle = std::strstr(str, escaped_percent);
-        if (!needle) break;
-        out.write(str, needle - str);
-        out << '%';
-        str = needle + (sizeof(escaped_percent) - 1u);
-    }
-    out << str;
-}
-
 inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
     const char *next = fmt;
     while (true) {
@@ -124,31 +111,6 @@ inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
     }
 }
 
-// I have to use size_t_constant instead of std::size_t because C++ templates forbid
-// a partially-specialized value parameter from depending on other parameters.
-
-template <typename, typename...>
-struct Print;
-
-template <std::size_t I, typename... Ts>
-struct Print<size_t_constant<I>, Ts...> {
-    static void run(Interpolation<Ts...> &&interpolation,
-                    const char *fmt, std::ostream &out) {
-        Interpolation<Ts...>::template _PrintElement<I>
-                            ::run(std::move(interpolation),
-                                  print_till_specifier(fmt, out), out);
-    }
-    Print() = delete;
-};
-
-template <typename... Ts>
-struct Print<size_t_constant<sizeof...(Ts)>, Ts...> {
-    static void run(Interpolation<Ts...> &&, const char *fmt, std::ostream &out) {
-        print_escaping_percents(fmt, out);
-    }
-    Print() = delete;
-};
-
 template <typename... Ts>
 class Interpolation {
     template <typename, typename...>
@@ -163,21 +125,30 @@ class Interpolation {
             if (IsIomanip<T>::value) {
                 _PrintElement<I + 1>::run(std::move(interpolation), fmt, out);
             } else {
-                Print<size_t_constant<I + 1>, Ts...>::run(std::move(interpolation), fmt, out);
+                std::move(interpolation)._print<I + 1>(fmt, out);
             }
         }
         _PrintElement() = delete;
     };
 
     template <std::size_t I>
-    struct _PrintElement<I, void> : Print<size_t_constant<I>, Ts...> {
-        static_assert(I == sizeof...(Ts), "I must represent the end of the tuple");
+    struct _PrintElement<I, void> {
+        static constexpr void run(Interpolation &&, const char *, std::ostream &) noexcept {
+        }
+        _PrintElement() = delete;
+
     };
 
     const char *const _fmt;
     std::tuple<Ts &&...> _elements;
 
     static const char *_check_format(const char *fmt);
+
+    template <std::size_t I>
+    void _print(const char *fmt, std::ostream &out) && {
+        _PrintElement<I>::run(std::move(*this),
+                              print_till_specifier(fmt, out), out);
+    }
 
 public:
     explicit Interpolation(const char *fmt, Ts &&...elements) :
@@ -240,8 +211,7 @@ template <typename... Ts>
 std::ostream &operator<<(std::ostream &out,
                          cs540::internal::Interpolation<Ts...> &&interpolation) {
     auto fmt = interpolation._fmt;
-    cs540::internal::Print<cs540::internal::size_t_constant<0>, Ts...>
-                   ::run(std::move(interpolation), fmt, out);
+    std::move(interpolation).template _print<0>(fmt, out);
     return out;
 }
 
