@@ -51,7 +51,7 @@ public:
 
 template <typename... Args, typename F>
 auto function(F &&f) {
-    return std::make_unique<internal::Function<F, Args...>>(
+    return std::make_unique<Function<F, Args...>>(
         std::forward<F>(f)
     );
 }
@@ -59,7 +59,7 @@ auto function(F &&f) {
 template <typename... Args, typename F>
 auto function(F *f) {
     return f
-        ? std::make_unique<internal::Function<F &, Args...>>(*f)
+        ? std::make_unique<Function<F &, Args...>>(*f)
         : nullptr;
 }
 }
