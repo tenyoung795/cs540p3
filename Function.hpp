@@ -82,7 +82,7 @@ public:
     Function(const Function &that) :
         _f{that._f ? that._f->clone() : nullptr} {}
 
-    Function(Function &&) = default;
+    Function(Function &&) noexcept = default;
 
     Function &operator=(const Function &that) {
         if (this != &that) {
@@ -91,7 +91,7 @@ public:
         return *this;
     }
 
-    Function &operator=(Function &&) = default;
+    Function &operator=(Function &&) noexcept = default;
 
     R operator()(Args... args) {
         return _f ? (*_f)(args...) : throw BadFunctionCall {};
