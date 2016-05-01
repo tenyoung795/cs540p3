@@ -84,7 +84,7 @@ inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
     while (true) {
         switch (*next) {
             case '\0':
-                out << fmt;
+                out.write(fmt, next - fmt);
                 return next;
             case '%':
                 out.write(fmt, next - fmt);
@@ -94,11 +94,11 @@ inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
                 ++next;
                 switch (*next) {
                     case '\0':
-                        out << fmt;
+                        out.write(fmt, next - fmt);
                         return next;
                     case '%':
                         out.write(fmt, (next - 1) - fmt);
-                        out << '%';
+                        out.put('%');
                         ++next;
                         fmt = next;
                         break;
