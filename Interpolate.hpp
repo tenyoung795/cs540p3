@@ -13,16 +13,6 @@
 #include <utility>
 
 namespace cs540 {
-namespace internal {
-template <typename...>
-class Interpolation;
-}
-}
-
-template <typename... Ts>
-std::ostream &operator<<(std::ostream &, cs540::internal::Interpolation<Ts...> &&);
-
-namespace cs540 {
 class WrongNumberOfArgs : public std::logic_error {
 public:
     explicit WrongNumberOfArgs(std::size_t expected, std::size_t actual) :
@@ -159,7 +149,7 @@ public:
     Interpolation(Interpolation &&) = default;
 
     template <typename... Us>
-    friend std::ostream &::operator<<(std::ostream &out, Interpolation<Us...> &&);
+    friend std::ostream &operator<<(std::ostream &, Interpolation<Us...> &&);
 }; // template <typename...> class Interpolation
 
 template <typename... Ts>
@@ -195,6 +185,13 @@ done:
     }
     return fmt;
 }
+
+template <typename... Ts>
+std::ostream &operator<<(std::ostream &out, Interpolation<Ts...> &&interpolation) {
+    auto fmt = interpolation._fmt;
+    std::move(interpolation).template _print<0>(fmt, out);
+    return out;
+}
 } // namespace internal
 
 template <typename... Ts>
@@ -206,13 +203,5 @@ inline constexpr auto ffr(std::ostream &(&f)(std::ostream &)) noexcept {
     return f;
 }
 } // namespace cs540
-
-template <typename... Ts>
-std::ostream &operator<<(std::ostream &out,
-                         cs540::internal::Interpolation<Ts...> &&interpolation) {
-    auto fmt = interpolation._fmt;
-    std::move(interpolation).template _print<0>(fmt, out);
-    return out;
-}
 
 #endif // CS540_INTERPOLATE_HPP
