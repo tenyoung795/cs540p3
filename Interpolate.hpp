@@ -202,7 +202,7 @@ auto Interpolate(const char *fmt, Ts &&...elements) {
     return internal::Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
 }
 
-inline auto ffr(std::ostream &(&f)(std::ostream &)) {
+inline constexpr auto ffr(std::ostream &(&f)(std::ostream &)) noexcept {
     return f;
 }
 } // namespace cs540
