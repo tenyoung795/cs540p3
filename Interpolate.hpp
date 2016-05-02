@@ -56,6 +56,9 @@ template <>
 struct IsIomanip<decltype(std::setw(0))> : std::true_type {};
 
 template <typename T>
+struct IsIomanip<T &> : IsIomanip<T> {};
+
+template <typename T>
 struct IsIomanip<const T &> : IsIomanip<T> {};
 
 template <std::size_t N>
