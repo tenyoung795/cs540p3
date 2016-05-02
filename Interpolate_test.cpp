@@ -2,8 +2,11 @@
 #include <iostream>
 #include <typeinfo>
 #include <sstream>
+#include <fstream>
 #include <iomanip>
 #include <cassert>
+#include <ctime>
+#include <cstring>
 
 class A {
     friend int main();
@@ -26,6 +29,19 @@ class B {
     B &operator=(const B &) = delete;
     const std::string str;
 };
+
+// This class is used to test space efficiency.
+class Out {
+};
+std::ostream &
+operator<<(std::ostream &os, const Out &) {
+    const std::string buf(1024*1024, 'A');
+    //for (std::size_t i = 0; i < 4*1024; i++) {
+    for (std::size_t i = 0; i < 4*512*1024; i++) {
+        os << buf;
+    }
+    return os;
+}
 
 template <typename... Ts>
 void test(const char *func, int line_no, const std::string &cmp, const std::string &fmt, Ts &&...params) {
@@ -116,6 +132,7 @@ main() {
     CS540_TEST("0x2134, f78", "%, %", std::showbase, std::hex, 0x2134, std::noshowbase, 0xf78);
     CS540_TEST("1, 1.00000, 1", "%, %, %", 1.0, std::showpoint, 1.0, std::noshowpoint, 1.0);
     CS540_TEST("1, 2, +1, +3", "%, %, %, %", 1.0, 2, std::showpos, 1.0, 3, std::noshowpos);
+    CS540_TEST("AA, aa", "%, %", std::hex, std::uppercase, 0xaa, std::nouppercase, 0xaa);
     CS540_TEST("3.14e-15, 0xfffff115, 3.14E-15, 0XFFFFF115", "%, %, %, %", std::showbase, std::hex, 3.14e-15, -3819, std::uppercase, 3.14e-15, -3819);
 
     // std::unitbuf, std::nounitbuf, std::internal, std::left, std::right,
@@ -131,8 +148,85 @@ main() {
         CS540_TEST(cmp, "ab%%%cd", 'x', ffr(std::ends), 'y');
     }
 
-    // std::endl also consumes a % sign.
+    // Test std::endl. This also consumes a % sign.
     CS540_TEST("i=1%, x=3.4989, s=foo\n true 1 1234\\",
      R"(i=%\%, x=%, s=%% % % %\)",
      1, std::setprecision(5), 3.4988678671, "foo", ffr(std::endl), std::boolalpha, true, std::noboolalpha, true, A(1234));
+
+    // Tests both std::setiosflags() and std::resetiosflags()
+    CS540_TEST("abc, 1234", "%, %",
+     std::resetiosflags(std::ios_base::basefield),
+     std::setiosflags(std::ios_base::hex),
+     0xabc,
+     std::resetiosflags(std::ios_base::basefield),
+     1234);
+
+    // Test std::setbase().
+    CS540_TEST("aa, 123, 999", "%, %, %",
+     std::setbase(16), 0xaa,
+     std::setbase(8), 0123,
+     std::setbase(10), 999);
+
+    // Test std::setfill(), std::setprecision(), and std::setw().
+    CS540_TEST("--1.234567899", "%", std::setw(13), std::setprecision(10), std::setfill('-'), 1.234567899);
+
+    // Test std::put_money().
+    {
+        std::stringstream ss;
+        ss.imbue(std::locale("en_US.utf8"));
+        ss << Interpolate("%, %", std::showbase, std::put_money(112), std::put_money(112, true));
+        // std::cout << ss.str() << std::endl;
+        assert(ss.str() == "$1.12, USD  1.12");
+    }
+    // Test std::put_time().
+    {
+        std::stringstream ss;
+        std::tm tm;
+        std::memset(&tm, 0, sizeof(tm));
+        tm.tm_sec = 44;
+        tm.tm_min = 53;
+        tm.tm_hour = 13;
+        tm.tm_mday = 2;
+        tm.tm_mon = 4;
+        tm.tm_year = 116;
+        tm.tm_wday = 1;
+        tm.tm_yday = 122;
+        tm.tm_isdst = 1;
+        std::tm tm2{tm};
+        tm2.tm_sec = 1; // Make time a bit different.
+        ss.imbue(std::locale("en_US.utf8"));
+        ss << Interpolate("%, %", std::put_time(&tm, "%c %Z"), std::put_time(&tm2, "%c %z"));
+        // std::cout << ss.str() << std::endl;
+        ss << " ";
+        ss.imbue(std::locale("C"));
+        ss << Interpolate("%, %", std::put_time(&tm, "%c %Z"), std::put_time(&tm2, "%c %z"));
+        // std::cout << ss.str() << std::endl;
+        assert(ss.str() == "Mon 02 May 2016 01:53:44 PM EDT EDT, Mon 02 May 2016 01:53:01 PM EDT +0000 Mon May  2 13:53:44 2016 EDT, Mon May  2 13:53:01 2016 +0000");
+    }
+
+    // Tests std::quoted().
+    CS540_TEST(R"("\"A backslash: \\\"")", "%", std::quoted("\"A backslash: \\\""));
+
+    // Verify that the operations are applied to the actual ostream.
+    {
+        std::stringstream ss;
+        ss << Interpolate("", std::showbase);
+        ss << Interpolate("% ", 11, std::hex);
+        ss << 0xabc;
+        ss << Interpolate(" %", 0xaa);
+        ss << Interpolate(" ", std::dec);
+        ss << 123;
+        ss << Interpolate("", std::oct);
+        ss << " " << 0567;
+        // std::cout << ss.str() << std::endl;
+        assert(ss.str() == "11 0xabc 0xaa 123 0567");
+    }
+
+    // Test space efficiency.
+    {
+        // std::fstream out("test.txt");
+        // out << Out{};
+        std::fstream out("/dev/null");
+        out << Interpolate("%", Out{});
+    }
 }
