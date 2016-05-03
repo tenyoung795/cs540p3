@@ -132,7 +132,6 @@ class Interpolation {
         static constexpr void run(Interpolation &&, const char *, std::ostream &) noexcept {
         }
         _PrintElement() = delete;
-
     };
 
     const char *const _fmt;
