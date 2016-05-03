@@ -154,8 +154,11 @@ public:
     Interpolation(const Interpolation &) = delete;
     Interpolation(Interpolation &&) = default;
 
-    template <typename... Us>
-    friend std::ostream &operator<<(std::ostream &, Interpolation<Us...> &&);
+    friend std::ostream &operator<<(std::ostream &out, Interpolation &&interpolation) {
+        auto fmt = interpolation._fmt;
+        std::move(interpolation)._print<0>(fmt, out);
+        return out;
+    }
 }; // template <typename...> class Interpolation
 
 template <typename... Ts>
@@ -190,13 +193,6 @@ done:
         throw WrongNumberOfArgs {expected, actual};
     }
     return fmt;
-}
-
-template <typename... Ts>
-std::ostream &operator<<(std::ostream &out, Interpolation<Ts...> &&interpolation) {
-    auto fmt = interpolation._fmt;
-    std::move(interpolation).template _print<0>(fmt, out);
-    return out;
 }
 } // namespace internal
 
