@@ -1,12 +1,18 @@
 #include "Interpolate.hpp"
 #include <iostream>
 #include <typeinfo>
+#include <locale>
 #include <sstream>
 #include <fstream>
 #include <iomanip>
 #include <cassert>
 #include <ctime>
 #include <cstring>
+// Needed by {set,get}rlimit().
+#include <sys/resource.h>
+#include <sys/time.h>
+
+constexpr unsigned MEMORY_LIMIT = 1024*1024*30;
 
 class A {
     friend int main();
@@ -59,6 +65,15 @@ int
 main() {
 
     using namespace cs540;
+
+    int rv;
+
+    // Limit the amount of memory that can be used, so as not to kill the
+    // machine when running the space efficiency test.
+    struct rlimit limit;
+    rv = getrlimit(RLIMIT_AS, &limit); assert(rv == 0);
+    limit.rlim_cur = MEMORY_LIMIT;
+    rv = setrlimit(RLIMIT_AS, &limit); assert(rv == 0);
 
     CS540_TEST("", "");
 
