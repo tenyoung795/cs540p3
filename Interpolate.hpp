@@ -166,23 +166,24 @@ const char *Interpolation<Ts...>::_check_format(const char *fmt) {
         switch (*iter) {
             case '\0':
                 goto done;
-            case '%':
-                ++actual;
-                break;
             case '\\':
                 ++iter;
                 switch (*iter) {
                     case '\0':
                         goto done;
                     case '%':
+                        ++iter;
                         break;
                     default:
-                        // skip the extra ++iter
-                        continue;
+                        break;
                 }
                 break;
+            case '%':
+                ++actual;
+            default:
+                ++iter;
+                break;
         }
-        ++iter;
     }
 done:
     if (actual != expected) {
