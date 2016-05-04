@@ -109,9 +109,6 @@ inline const char *print_till_specifier(const char *fmt, std::ostream &out) {
 
 template <typename... Ts>
 class Interpolation {
-    template <typename, typename...>
-    friend struct Print;
-
     template <std::size_t I,
               typename T = std::tuple_element_t<I, std::tuple<Ts..., void>>>
     struct _PrintElement {
