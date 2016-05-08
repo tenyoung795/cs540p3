@@ -190,7 +190,8 @@ public:
     }
 
     Interpolation(const Interpolation &) = delete;
-    Interpolation(Interpolation &&) = default;
+    Interpolation(Interpolation &&)
+        noexcept(std::is_nothrow_move_constructible<std::tuple<Ts &&...>>::value) = default;
 
     friend std::ostream &operator<<(std::ostream &out, Interpolation &&interpolation) {
         auto fmt = interpolation._fmt;
