@@ -11,11 +11,12 @@
 // Needed by {set,get}rlimit().
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 constexpr unsigned MEMORY_LIMIT = 1024*1024*30;
 
 class A {
-    friend int main();
+    friend int main(int argc, char **argv);
     friend std::ostream & operator<<(std::ostream &os, const A &a) {
         return os << a.i;
     }
@@ -26,7 +27,7 @@ class A {
 };
 
 class B {
-    friend int main();
+    friend int main(int argc, char **argv);
     friend std::ostream & operator<<(std::ostream &os, const B &a) {
         return os << a.str;
     }
@@ -38,12 +39,14 @@ class B {
 
 // This class is used to test space efficiency.
 class Out {
+   public:
+      Out(std::size_t mem_amount) : mem_amount(mem_amount) {}
+      const std::size_t mem_amount;
 };
 std::ostream &
-operator<<(std::ostream &os, const Out &) {
+operator<<(std::ostream &os, const Out &o) {
     const std::string buf(1024*1024, 'A');
-    //for (std::size_t i = 0; i < 4*1024; i++) {
-    for (std::size_t i = 0; i < 4*512*1024; i++) {
+    for (std::size_t i = 0; i < o.mem_amount; i++) {
         os << buf;
     }
     return os;
@@ -62,18 +65,41 @@ void test(const char *func, int line_no, const std::string &cmp, const std::stri
 #define CS540_TEST(...) test(__FUNCTION__, __LINE__, __VA_ARGS__)
 
 int
-main() {
-
-    using namespace cs540;
+main(int argc, char **argv) {
 
     int rv;
+    bool do_mem_test = false;
 
-    // Limit the amount of memory that can be used, so as not to kill the
-    // machine when running the space efficiency test.
-    struct rlimit limit;
-    rv = getrlimit(RLIMIT_AS, &limit); assert(rv == 0);
-    limit.rlim_cur = MEMORY_LIMIT;
-    rv = setrlimit(RLIMIT_AS, &limit); assert(rv == 0);
+    {
+        int c;
+        while((c = getopt(argc, argv, "m")) != -1) {
+            switch(c) {
+                case 'm' :
+                do_mem_test = true;
+                break;
+            case '?' :
+                std::cout << "Unrecognized option " << isprint(optopt) << ". The valid options are:\n"
+                 "\t-m\t:\tEnables large memory test.\n";
+                return 1;
+                break;
+            default :
+                abort();
+                break;
+            }
+        }
+    }
+
+    if (do_mem_test) {
+
+        // Limit the amount of memory that can be used, so as not to kill the
+        // machine when running the space efficiency test.
+        struct rlimit limit;
+        rv = getrlimit(RLIMIT_AS, &limit); assert(rv == 0);
+        limit.rlim_cur = MEMORY_LIMIT;
+        rv = setrlimit(RLIMIT_AS, &limit); assert(rv == 0);
+    }
+
+    using namespace cs540;
 
     CS540_TEST("", "");
 
@@ -163,6 +189,13 @@ main() {
         CS540_TEST(cmp, "ab%%%cd", 'x', ffr(std::ends), 'y');
     }
 
+    // Test std::flush. This does not consume a % sign.
+    {
+        // It'd be better to check that the flush actually occurred, but that
+        // would be harder.
+        std::cout << Interpolate("%", "std::flush\n", ffr(std::flush));
+    }
+
     // Test std::endl. This also consumes a % sign.
     CS540_TEST("i=1%, x=3.4989, s=foo\n true 1 1234\\",
      R"(i=%\%, x=%, s=%% % % %\)",
@@ -239,9 +272,10 @@ main() {
 
     // Test space efficiency.
     {
-        // std::fstream out("test.txt");
-        // out << Out{};
         std::fstream out("/dev/null");
-        out << Interpolate("%", Out{});
+        if (do_mem_test)
+           out << Interpolate("%", Out{4*512*1024});
+        else
+           out << Interpolate("%", Out{1024});
     }
 }
