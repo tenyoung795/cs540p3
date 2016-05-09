@@ -38,7 +38,8 @@ class Function final : public FunctionBase<std::result_of_t<F(Args...)>, Args...
 
 public:
     template <typename G>
-    Function(G &&f) : _f{std::forward<G>(f)} {}
+    Function(G &&f) noexcept(std::is_nothrow_constructible<F, G>::value) :
+        _f{std::forward<G>(f)} {}
 
     _R operator()(Args... args) override {
         return _f(args...);
