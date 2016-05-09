@@ -18,7 +18,7 @@ namespace internal {
 template <typename R, typename... Args>
 class FunctionBase {
 protected:
-    FunctionBase() = default;
+    constexpr FunctionBase() noexcept = default;
 
 public:
     FunctionBase(const FunctionBase &) = delete;
