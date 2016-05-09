@@ -28,7 +28,7 @@ public:
 
     virtual ~FunctionBase() = default;
     virtual R operator()(Args...) = 0;
-    virtual std::unique_ptr<FunctionBase> clone() = 0;
+    virtual std::unique_ptr<FunctionBase> clone() const = 0;
 };
 
 template <typename F, typename... Args>
@@ -44,7 +44,7 @@ public:
         return _f(args...);
     }
 
-    std::unique_ptr<FunctionBase<_R, Args...>> clone() override {
+    std::unique_ptr<FunctionBase<_R, Args...>> clone() const override {
         return std::make_unique<Function>(_f);
     }
 };
