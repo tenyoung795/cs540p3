@@ -240,11 +240,11 @@ auto Interpolate(const char *fmt, Ts &&...elements) {
     return internal::Interpolation<Ts...> {fmt, std::forward<Ts>(elements)...};
 }
 
-constexpr auto ffr(std::ios &(&f)(std::ios &)) noexcept {
+constexpr auto ffr(std::ios &(*f)(std::ios &)) noexcept {
     return f;
 }
 
-constexpr auto ffr(std::ostream &(&f)(std::ostream &)) noexcept {
+constexpr auto ffr(std::ostream &(*f)(std::ostream &)) noexcept {
     return f;
 }
 } // namespace cs540
