@@ -151,15 +151,15 @@ class Interpolation {
     template <std::size_t I,
               typename T = std::tuple_element_t<I, std::tuple<Ts..., void>>>
     struct _PrintElement {
-        static void run(Interpolation &&interpolation, const char *fmt,
+        static void run(Interpolation &&interpolation,
                         std::ostream &out) {
             auto &&element = std::get<I>(interpolation._elements);
             bool should_consume = !is_iomanip(element);
             out << std::forward<T>(element);
             if (should_consume) {
-                std::move(interpolation)._print<I + 1>(fmt, out);
+                std::move(interpolation)._print<I + 1>(out);
             } else {
-                _PrintElement<I + 1>::run(std::move(interpolation), fmt, out);
+                _PrintElement<I + 1>::run(std::move(interpolation), out);
             }
         }
         _PrintElement() = delete;
@@ -167,20 +167,20 @@ class Interpolation {
 
     template <std::size_t I>
     struct _PrintElement<I, void> {
-        static constexpr void run(Interpolation &&, const char *, std::ostream &) noexcept {
+        static constexpr void run(Interpolation &&, std::ostream &) noexcept {
         }
         _PrintElement() = delete;
     };
 
-    const char *const _fmt;
+    const char *_fmt;
     std::tuple<Ts &&...> _elements;
 
     void _check_format() const;
 
     template <std::size_t I>
-    void _print(const char *fmt, std::ostream &out) && {
-        _PrintElement<I>::run(std::move(*this),
-                              print_till_specifier(fmt, out), out);
+    void _print(std::ostream &out) && {
+        _fmt = print_till_specifier(_fmt, out);
+        _PrintElement<I>::run(std::move(*this), out);
     }
 
 public:
@@ -194,8 +194,7 @@ public:
         noexcept(std::is_nothrow_move_constructible<std::tuple<Ts &&...>>::value) = default;
 
     friend std::ostream &operator<<(std::ostream &out, Interpolation &&interpolation) {
-        auto fmt = interpolation._fmt;
-        std::move(interpolation)._print<0>(fmt, out);
+        std::move(interpolation)._print<0>(out);
         return out;
     }
 }; // template <typename...> class Interpolation
